@@ -20,54 +20,54 @@ export default function Dashboard() {
     // 1. Caso original
     '12345678-9': {
       tecnico: [
-        { id_registro: 'TEC-1', area_nombre: 'Living Principal', area_tamano: 'Grande', wifi_dbm: 42, margen_error: 2, latitud: 33.4569, longitud: 70.6483 },
-        { id_registro: 'TEC-2', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: 50, margen_error: 3, latitud: 33.4569, longitud: 70.6485 },
-        { id_registro: 'TEC-3', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: 82, margen_error: 2, latitud: 33.4571, longitud: 70.6482 }, 
-        { id_registro: 'TEC-4', area_nombre: 'Cocina Americana', area_tamano: 'Mediano', wifi_dbm: 55, margen_error: 3, latitud: 33.4570, longitud: 70.6480 }
+        { id_registro: 'TEC-1', area_nombre: 'Living Principal', area_tamano: 'Grande', wifi_dbm: -42, margen_error: 2, latitud: -33.4569, longitud: -70.6483 },
+        { id_registro: 'TEC-2', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: -50, margen_error: 3, latitud: -33.4569, longitud: -70.6485 },
+        { id_registro: 'TEC-3', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: -82, margen_error: 2, latitud: -33.4571, longitud: -70.6482 }, 
+        { id_registro: 'TEC-4', area_nombre: 'Cocina Americana', area_tamano: 'Mediano', wifi_dbm: -55, margen_error: 3, latitud: -33.4570, longitud: -70.6480 }
       ],
       cliente: [
-        { id_registro: 'CLI-1', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: 65, margen_error: 4, latitud: 33.4569, longitud: 70.6485 },
-        { id_registro: 'CLI-2', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: 85, margen_error: 3, latitud: 33.4571, longitud: 70.6482 },
+        { id_registro: 'CLI-1', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: -65, margen_error: 4, latitud: -33.4569, longitud: -70.6485 },
+        { id_registro: 'CLI-2', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: -85, margen_error: 3, latitud: -33.4571, longitud: -70.6482 },
       ]
     },
     // 2. Caso: Casa con subterráneo (Atenuación severa por hormigón)
     '98765432-1': {
       tecnico: [
-        { id_registro: 'TEC-5', area_nombre: 'Sala de Estar (Piso 1)', area_tamano: 'Grande', wifi_dbm: 45, margen_error: 2, latitud: 33.4601, longitud: 70.6501 },
-        { id_registro: 'TEC-6', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: 88, margen_error: 5, latitud: 33.4601, longitud: 70.6501 }
+        { id_registro: 'TEC-5', area_nombre: 'Sala de Estar (Piso 1)', area_tamano: 'Grande', wifi_dbm: -45, margen_error: 2, latitud: -33.4601, longitud: -70.6501 },
+        { id_registro: 'TEC-6', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: -88, margen_error: 5, latitud: -33.4601, longitud: -70.6501 }
       ],
       cliente: [
-        { id_registro: 'CLI-3', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: 90, margen_error: 4, latitud: 33.4601, longitud: 70.6501 }
+        { id_registro: 'CLI-3', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: -90, margen_error: 4, latitud: -33.4601, longitud: -70.6501 }
       ]
     },
     // 3. Caso: Departamento con muros estructurales
     '19283746-5': {
       tecnico: [
-        { id_registro: 'TEC-7', area_nombre: 'Living Comedor', area_tamano: 'Mediano', wifi_dbm: 38, margen_error: 1, latitud: 33.4215, longitud: 70.6012 },
-        { id_registro: 'TEC-8', area_nombre: 'Pasillo Habitaciones', area_tamano: 'Pequeño', wifi_dbm: 60, margen_error: 2, latitud: 33.4214, longitud: 70.6013 },
-        { id_registro: 'TEC-9', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: 68, margen_error: 3, latitud: 33.4213, longitud: 70.6014 }
+        { id_registro: 'TEC-7', area_nombre: 'Living Comedor', area_tamano: 'Mediano', wifi_dbm: -38, margen_error: 1, latitud: -33.4215, longitud: -70.6012 },
+        { id_registro: 'TEC-8', area_nombre: 'Pasillo Habitaciones', area_tamano: 'Pequeño', wifi_dbm: -60, margen_error: 2, latitud: -33.4214, longitud: -70.6013 },
+        { id_registro: 'TEC-9', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: -68, margen_error: 3, latitud: -33.4213, longitud: -70.6014 }
       ],
       cliente: [
-        { id_registro: 'CLI-4', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: 75, margen_error: 2, latitud: 33.4213, longitud: 70.6014 }
+        { id_registro: 'CLI-4', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: -75, margen_error: 2, latitud: -33.4213, longitud: -70.6014 }
       ]
     },
     // 4. Caso: Propiedad grande con exteriores
     '11223344-5': {
       tecnico: [
-        { id_registro: 'TEC-10', area_nombre: 'Hall de Acceso', area_tamano: 'Pequeño', wifi_dbm: 48, margen_error: 2, latitud: 33.3850, longitud: 70.5500 },
-        { id_registro: 'TEC-11', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: 52, margen_error: 2, latitud: 33.3851, longitud: 70.5498 },
-        { id_registro: 'TEC-12', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: 80, margen_error: 6, latitud: 33.3855, longitud: 70.5495 }
+        { id_registro: 'TEC-10', area_nombre: 'Hall de Acceso', area_tamano: 'Pequeño', wifi_dbm: -48, margen_error: 2, latitud: -33.3850, longitud: -70.5500 },
+        { id_registro: 'TEC-11', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: -52, margen_error: 2, latitud: -33.3851, longitud: -70.5498 },
+        { id_registro: 'TEC-12', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: -80, margen_error: 6, latitud: -33.3855, longitud: -70.5495 }
       ],
       cliente: [
-        { id_registro: 'CLI-5', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: 86, margen_error: 5, latitud: 33.3855, longitud: 70.5495 },
-        { id_registro: 'CLI-6', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: 65, margen_error: 2, latitud: 33.3851, longitud: 70.5498 }
+        { id_registro: 'CLI-5', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: -86, margen_error: 5, latitud: -33.3855, longitud: -70.5495 },
+        { id_registro: 'CLI-6', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: -65, margen_error: 2, latitud: -33.3851, longitud: -70.5498 }
       ]
     },
     // 5. Caso: Instalación sin reportes de fallas por parte del cliente
     '15667788-0': {
       tecnico: [
-        { id_registro: 'TEC-13', area_nombre: 'Oficina (Home Office)', area_tamano: 'Mediano', wifi_dbm: 40, margen_error: 1, latitud: 33.5100, longitud: 70.7100 },
-        { id_registro: 'TEC-14', area_nombre: 'Dormitorio Visitas', area_tamano: 'Pequeño', wifi_dbm: 62, margen_error: 3, latitud: 33.5102, longitud: 70.7105 }
+        { id_registro: 'TEC-13', area_nombre: 'Oficina (Home Office)', area_tamano: 'Mediano', wifi_dbm: -40, margen_error: 1, latitud: -33.5100, longitud: -70.7100 },
+        { id_registro: 'TEC-14', area_nombre: 'Dormitorio Visitas', area_tamano: 'Pequeño', wifi_dbm: -62, margen_error: 3, latitud: -33.5102, longitud: -70.7105 }
       ],
       cliente: [] 
     }
