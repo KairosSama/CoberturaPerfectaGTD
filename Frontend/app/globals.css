@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* --- PALETA CORPORATIVA GTD --- */
+  --color-gtdNavy: #002855;
+  --color-gtdCyan: #00A4E4;
+  --color-surface: #FFFFFF;
+  --color-gtdBackground: #F8FAFC;
+  --color-textDark: #1E293B;
+  --color-textMuted: #64748B;
+  --color-gtdBorder: #E2E8F0;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
