@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '@/lib/supabaseClient'; // Conexión real a BD
+import { supabase } from '@/lib/supabaseClient'; 
 import SearchRUT from '@/components/SearchRUT';
 import InstallationCard from '@/components/InstallationCard';
 import MapPlaceholder from '@/components/MapPlaceholder';
@@ -30,25 +30,38 @@ export default function Dashboard() {
       const cleanRut = rut.trim();
       if (!cleanRut) throw new Error('Ingrese un RUT válido.');
 
-      // Llamado directo a la nueva función SQL
+      // Llamado a Supabase
       const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura', {
         p_rut_cliente: cleanRut
       });
 
       if (supaError) throw new Error(supaError.message);
 
-      if (!data) {
+      // --- PARCHE DE LECTURA RPC ---
+      // A veces Supabase devuelve el JSON de Postgres como un string en vez de un objeto.
+      // Validamos y forzamos el parseo si es necesario.
+      let parsedData = data;
+      if (typeof data === 'string') {
+        try {
+          parsedData = JSON.parse(data);
+        } catch (e) {
+          throw new Error('La base de datos devolvió un formato ilegible.');
+        }
+      }
+
+      // Ahora leemos desde parsedData en lugar de data directamente
+      if (!parsedData) {
         setError('No se obtuvo respuesta del servidor central.');
-      } else if (data.status === 'CLIENTE_NO_ENCONTRADO') {
+      } else if (parsedData.status === 'CLIENTE_NO_ENCONTRADO') {
         setError('El RUT ingresado no está registrado en el sistema de GTD.');
-      } else if (data.status === 'SIN_ACTAS') {
+      } else if (parsedData.status === 'SIN_ACTAS') {
         setError('El cliente existe, pero no tiene historial de visitas ni reportes registrados.');
-      } else if (data.status === 'PROCESADO') {
-        // Inyectamos el historial completo que armó la base de datos
-        setHistorialActas(data.historial || []);
-        // Autoseleccionamos el acta más reciente (la última del array) para cargar la pantalla
-        if (data.historial && data.historial.length > 0) {
-          setActaActiva(data.historial[data.historial.length - 1]);
+      } else if (parsedData.status === 'PROCESADO') {
+        setHistorialActas(parsedData.historial || []);
+        
+        if (parsedData.historial && parsedData.historial.length > 0) {
+          // Autoseleccionar siempre el acta más reciente (la última de la lista)
+          setActaActiva(parsedData.historial[parsedData.historial.length - 1]);
         }
       }
 
@@ -60,7 +73,6 @@ export default function Dashboard() {
     }
   };
 
-  // Coordenadas dinámicas basadas ÚNICAMENTE en el acta que el ejecutivo seleccionó
   const mapCoordinates = actaActiva?.mediciones.map(item => ({
     latitud: item.coordenadas?.latitud || 0,
     longitud: item.coordenadas?.longitud || 0,
