@@ -32,7 +32,7 @@ export default function Dashboard() {
 
       // Llamado a Supabase
       const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura', {
-         cleanRut
+         p_rut_cliente: cleanRut
       });
 
       if (supaError) throw new Error(supaError.message);
