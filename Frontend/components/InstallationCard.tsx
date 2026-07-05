@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion';
 
 interface InstallationCardProps {
-  area_nombre: string;
-  area_tamano: string;
-  wifi_dbm: number;
-  margen_error: number;
+  zona: string;
+  tamano_estimado: string;
+  dbm: number;
+  precision_gps_metros: number;
 }
 
 const ZoneIcon = () => (
@@ -20,29 +20,25 @@ const WifiSignalIcon = ({ color }: { color: string }) => (
     </svg>
 );
 
-export default function InstallationCard({ area_nombre, area_tamano, wifi_dbm, margen_error }: InstallationCardProps) {
+export default function InstallationCard({ zona, tamano_estimado, dbm, precision_gps_metros }: InstallationCardProps) {
   
-  // Colores de señal directos (Verde esmeralda, Amarillo mostaza, Rojo vibrante)
-  const getSignalDetails = (dbm: number) => {
-    if (dbm > -60) return { color: 'text-[#10B981]', bgColor: 'bg-[#10B981]', status: 'Excelente Señal' };
-    if (dbm > -70) return { color: 'text-[#F59E0B]', bgColor: 'bg-[#F59E0B]', status: 'Señal Regular' };
+  const getSignalDetails = (signal: number) => {
+    if (signal > -60) return { color: 'text-[#10B981]', bgColor: 'bg-[#10B981]', status: 'Excelente Señal' };
+    if (signal > -70) return { color: 'text-[#F59E0B]', bgColor: 'bg-[#F59E0B]', status: 'Señal Regular' };
     return { color: 'text-[#EF4444]', bgColor: 'bg-[#EF4444]', status: 'Señal Crítica (Sombra)' };
   };
 
-  const { color, bgColor, status } = getSignalDetails(wifi_dbm);
+  const { color, bgColor, status } = getSignalDetails(dbm);
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-sm border border-[#E2E8F0] flex flex-col gap-3 relative overflow-hidden group">
-      
-      {/* Borde sutil Celeste al hacer hover */}
       <div className="absolute inset-x-0 top-0 h-1 bg-[#00A4E4] opacity-0 group-hover:opacity-100 transition-opacity" />
 
       <div className="flex justify-between items-center">
-        {/* Título en Azul Marino */}
-        <h3 className="text-lg font-bold text-[#002855]">{area_nombre}</h3>
-        <div className="flex items-center gap-1 text-[#64748B]">
+        <h3 className="text-lg font-bold text-[#002855] truncate pr-2">{zona}</h3>
+        <div className="flex items-center gap-1 text-[#64748B] flex-shrink-0">
             <ZoneIcon />
-            <span className="text-xs font-medium">{area_tamano}</span>
+            <span className="text-xs font-medium">{tamano_estimado}</span>
         </div>
       </div>
 
@@ -50,7 +46,7 @@ export default function InstallationCard({ area_nombre, area_tamano, wifi_dbm, m
         <div className="flex items-center gap-3">
           <WifiSignalIcon color={color} />
           <div className="flex flex-col">
-            <span className={`font-bold ${color}`}>{wifi_dbm} dBm</span>
+            <span className={`font-bold ${color}`}>{dbm} dBm</span>
             <span className="text-xs text-[#64748B] font-medium">{status}</span>
           </div>
         </div>
@@ -67,7 +63,7 @@ export default function InstallationCard({ area_nombre, area_tamano, wifi_dbm, m
 
       <div className="text-xs text-[#64748B] flex justify-between items-center border-t border-[#E2E8F0] pt-2.5">
         <span>Margen Error GPS:</span>
-        <span className="font-semibold text-[#1E293B]">{margen_error} m</span>
+        <span className="font-semibold text-[#1E293B]">{precision_gps_metros} m</span>
       </div>
     </div>
   );
