@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabaseClient'; // Importamos el cliente real
 import SearchRUT from '@/components/SearchRUT';
 import InstallationCard from '@/components/InstallationCard';
 import MapPlaceholder from '@/components/MapPlaceholder';
@@ -12,101 +13,58 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Controla qué capa del mapa se está viendo
   const [mapView, setMapView] = useState<'tecnico' | 'cliente' | 'overlay'>('overlay');
 
-  // Base de datos simulada (Mock Database) ampliada con 5 RUTs
-  const mockDatabase: Record<string, { tecnico: any[], cliente: any[] }> = {
-    // 1. Caso original
-    '12345678-9': {
-      tecnico: [
-        { id_registro: 'TEC-1', area_nombre: 'Living Principal', area_tamano: 'Grande', wifi_dbm: -42, margen_error: 2, latitud: -33.4569, longitud: -70.6483 },
-        { id_registro: 'TEC-2', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: -50, margen_error: 3, latitud: -33.4569, longitud: -70.6485 },
-        { id_registro: 'TEC-3', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: -82, margen_error: 2, latitud: -33.4571, longitud: -70.6482 }, 
-        { id_registro: 'TEC-4', area_nombre: 'Cocina Americana', area_tamano: 'Mediano', wifi_dbm: -55, margen_error: 3, latitud: -33.4570, longitud: -70.6480 }
-      ],
-      cliente: [
-        { id_registro: 'CLI-1', area_nombre: 'Dormitorio Principal', area_tamano: 'Mediano', wifi_dbm: -65, margen_error: 4, latitud: -33.4569, longitud: -70.6485 },
-        { id_registro: 'CLI-2', area_nombre: 'Terraza Quincho', area_tamano: 'Grande', wifi_dbm: -85, margen_error: 3, latitud: -33.4571, longitud: -70.6482 },
-      ]
-    },
-    // 2. Caso: Casa con subterráneo (Atenuación severa por hormigón)
-    '98765432-1': {
-      tecnico: [
-        { id_registro: 'TEC-5', area_nombre: 'Sala de Estar (Piso 1)', area_tamano: 'Grande', wifi_dbm: -45, margen_error: 2, latitud: -33.4601, longitud: -70.6501 },
-        { id_registro: 'TEC-6', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: -88, margen_error: 5, latitud: -33.4601, longitud: -70.6501 }
-      ],
-      cliente: [
-        { id_registro: 'CLI-3', area_nombre: 'Subterráneo / Sala de Juegos', area_tamano: 'Grande', wifi_dbm: -90, margen_error: 4, latitud: -33.4601, longitud: -70.6501 }
-      ]
-    },
-    // 3. Caso: Departamento con muros estructurales
-    '19283746-5': {
-      tecnico: [
-        { id_registro: 'TEC-7', area_nombre: 'Living Comedor', area_tamano: 'Mediano', wifi_dbm: -38, margen_error: 1, latitud: -33.4215, longitud: -70.6012 },
-        { id_registro: 'TEC-8', area_nombre: 'Pasillo Habitaciones', area_tamano: 'Pequeño', wifi_dbm: -60, margen_error: 2, latitud: -33.4214, longitud: -70.6013 },
-        { id_registro: 'TEC-9', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: -68, margen_error: 3, latitud: -33.4213, longitud: -70.6014 }
-      ],
-      cliente: [
-        { id_registro: 'CLI-4', area_nombre: 'Pieza Niños', area_tamano: 'Mediano', wifi_dbm: -75, margen_error: 2, latitud: -33.4213, longitud: -70.6014 }
-      ]
-    },
-    // 4. Caso: Propiedad grande con exteriores
-    '11223344-5': {
-      tecnico: [
-        { id_registro: 'TEC-10', area_nombre: 'Hall de Acceso', area_tamano: 'Pequeño', wifi_dbm: -48, margen_error: 2, latitud: -33.3850, longitud: -70.5500 },
-        { id_registro: 'TEC-11', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: -52, margen_error: 2, latitud: -33.3851, longitud: -70.5498 },
-        { id_registro: 'TEC-12', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: -80, margen_error: 6, latitud: -33.3855, longitud: -70.5495 }
-      ],
-      cliente: [
-        { id_registro: 'CLI-5', area_nombre: 'Piscina y Jardín Trasero', area_tamano: 'Muy Grande', wifi_dbm: -86, margen_error: 5, latitud: -33.3855, longitud: -70.5495 },
-        { id_registro: 'CLI-6', area_nombre: 'Dormitorio Principal', area_tamano: 'Grande', wifi_dbm: -65, margen_error: 2, latitud: -33.3851, longitud: -70.5498 }
-      ]
-    },
-    // 5. Caso: Instalación sin reportes de fallas por parte del cliente
-    '15667788-0': {
-      tecnico: [
-        { id_registro: 'TEC-13', area_nombre: 'Oficina (Home Office)', area_tamano: 'Mediano', wifi_dbm: -40, margen_error: 1, latitud: -33.5100, longitud: -70.7100 },
-        { id_registro: 'TEC-14', area_nombre: 'Dormitorio Visitas', area_tamano: 'Pequeño', wifi_dbm: -62, margen_error: 3, latitud: -33.5102, longitud: -70.7105 }
-      ],
-      cliente: [] 
-    }
-  };
-
-  const fetchInstalaciones = (rut: string) => {
+  // Función asíncrona que conecta directamente con la BD de Supabase
+  const fetchInstalaciones = async (rut: string) => {
     setIsLoading(true);
     setError(null);
     setTecnicoData([]);
     setClienteData([]);
 
-    setTimeout(() => {
+    try {
       const cleanRut = rut.trim();
-      
-      if (mockDatabase[cleanRut]) {
-        setTecnicoData(mockDatabase[cleanRut].tecnico);
-        setClienteData(mockDatabase[cleanRut].cliente);
-      } else {
-        setError('No se encontraron registros de cobertura o actas firmadas para el RUT ingresado.');
+      if (!cleanRut) throw new Error('Debe ingresar un RUT para realizar la búsqueda.');
+
+      // Llamada directa al Remote Procedure Call (RPC) de la base de datos
+      const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura_por_rut', {
+        p_rut_cliente: cleanRut
+      });
+
+      if (supaError) {
+        throw new Error(supaError.message);
       }
+
+      // Manejo de los estados definidos por la base de datos
+      if (!data) {
+        setError('No se obtuvo respuesta del servidor.');
+      } else if (data.status === 'CLIENTE_NO_ENCONTRADO') {
+        setError('El RUT ingresado no se encuentra registrado en el sistema de clientes de GTD.');
+      } else if (data.status === 'SIN_LINEA_BASE') {
+        setError('El cliente existe, pero no posee un acta técnica (Línea Base) registrada.');
+      } else if (data.status === 'PROCESADO') {
+        // La consulta fue exitosa, inyectamos los datos a los estados
+        setTecnicoData(data.lineas_base_tecnico || []);
+        setClienteData(data.mediciones_cliente || []);
+      }
+
+    } catch (err: any) {
+      console.error("Error en la conexión a Supabase:", err);
+      setError('Error al procesar la solicitud: ' + (err.message || 'Falla de red'));
+    } finally {
       setIsLoading(false);
-    }, 1000); 
+    }
   };
 
+  // Preparamos el array unificado para el mapa
   const mapCoordinates = [...tecnicoData, ...clienteData].map(item => ({
-    latitud: item.latitud,
-    longitud: item.longitud,
-    dbm: item.wifi_dbm
+    latitud: item.coordenadas?.latitud || 0,
+    longitud: item.coordenadas?.longitud || 0,
+    dbm: item.dbm
   }));
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0 },
-  };
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } };
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -126,7 +84,8 @@ export default function Dashboard() {
         </div>
         <SearchRUT onSearch={fetchInstalaciones} isLoading={isLoading} />
         {error && (
-          <motion.div className="mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded text-red-700 text-sm font-medium">
+          <motion.div className="mt-4 bg-red-50 border-l-4 border-red-500 p-3 rounded text-red-700 text-sm font-medium flex items-center gap-2">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             {error}
           </motion.div>
         )}
@@ -148,8 +107,13 @@ export default function Dashboard() {
               
               <motion.div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar" variants={containerVariants} initial="hidden" animate="visible">
                 {tecnicoData.map((zona) => (
-                  <motion.div key={zona.id_registro} variants={itemVariants}>
-                    <InstallationCard {...zona} />
+                  <motion.div key={zona.id_medicion} variants={itemVariants}>
+                    <InstallationCard 
+                      zona={zona.zona} 
+                      tamano_estimado={zona.tamano_estimado} 
+                      dbm={zona.dbm} 
+                      precision_gps_metros={zona.precision_gps_metros} 
+                    />
                   </motion.div>
                 ))}
               </motion.div>
@@ -166,12 +130,17 @@ export default function Dashboard() {
               
               <motion.div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar" variants={containerVariants} initial="hidden" animate="visible">
                 {clienteData.map((zona) => (
-                  <motion.div key={zona.id_registro} variants={itemVariants}>
-                    <InstallationCard {...zona} />
+                  <motion.div key={zona.id_medicion} variants={itemVariants}>
+                    <InstallationCard 
+                      zona={zona.zona} 
+                      tamano_estimado={zona.tamano_estimado} 
+                      dbm={zona.dbm} 
+                      precision_gps_metros={zona.precision_gps_metros} 
+                    />
                   </motion.div>
                 ))}
                 {clienteData.length === 0 && (
-                  <p className="text-sm text-gray-400 italic text-center mt-4">Sin reportes recientes.</p>
+                  <p className="text-sm text-[#64748B] italic text-center mt-4 bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">Sin reportes recientes desde la app Mi GTD.</p>
                 )}
               </motion.div>
             </section>
@@ -181,7 +150,6 @@ export default function Dashboard() {
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
                   <h3 className="font-bold text-[#002855] text-sm">Topología Georreferenciada</h3>
                   
-                  {/* Botones para alternar el mapa de calor */}
                   <div className="flex bg-[#F8FAFC] p-1 rounded-lg border border-[#E2E8F0]">
                     <button 
                       onClick={() => setMapView('tecnico')} 
@@ -220,25 +188,19 @@ export default function Dashboard() {
             </div>
             
             <div className="flex flex-wrap gap-3">
-              {/* Botón de Contención (Upselling eero) */}
               <button 
                 className="px-5 py-2.5 rounded-lg border-2 border-[#10B981] text-[#10B981] font-bold text-sm hover:bg-[#F0FDF4] transition flex items-center gap-2"
                 onClick={() => alert('Iniciando flujo de Upselling: Ofreciendo Extensor eero TrueMesh.')}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                 Contención: Ofrecer Extensor
               </button>
 
-              {/* Botón de Ticket Válido */}
               <button 
                 className="px-5 py-2.5 rounded-lg bg-[#00A4E4] text-white font-bold text-sm hover:bg-[#008CBE] shadow-md transition flex items-center gap-2"
                 onClick={() => alert('Generando Ticket de Visita Técnica en sistema central...')}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
                 Generar Ticket de Falla
               </button>
             </div>
