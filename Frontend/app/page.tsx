@@ -30,16 +30,12 @@ export default function Dashboard() {
       const cleanRut = rut.trim();
       if (!cleanRut) throw new Error('Ingrese un RUT válido.');
 
-      // Llamado a Supabase
       const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura', {
-         p_rut_cliente: cleanRut
+        p_rut_cliente: cleanRut
       });
 
       if (supaError) throw new Error(supaError.message);
 
-      // --- PARCHE DE LECTURA RPC ---
-      // A veces Supabase devuelve el JSON de Postgres como un string en vez de un objeto.
-      // Validamos y forzamos el parseo si es necesario.
       let parsedData = data;
       if (typeof data === 'string') {
         try {
@@ -49,7 +45,6 @@ export default function Dashboard() {
         }
       }
 
-      // Ahora leemos desde parsedData en lugar de data directamente
       if (!parsedData) {
         setError('No se obtuvo respuesta del servidor central.');
       } else if (parsedData.status === 'CLIENTE_NO_ENCONTRADO') {
@@ -58,9 +53,7 @@ export default function Dashboard() {
         setError('El cliente existe, pero no tiene historial de visitas ni reportes registrados.');
       } else if (parsedData.status === 'PROCESADO') {
         setHistorialActas(parsedData.historial || []);
-        
         if (parsedData.historial && parsedData.historial.length > 0) {
-          // Autoseleccionar siempre el acta más reciente (la última de la lista)
           setActaActiva(parsedData.historial[parsedData.historial.length - 1]);
         }
       }
@@ -78,6 +71,9 @@ export default function Dashboard() {
     longitud: item.coordenadas?.longitud || 0,
     dbm: item.dbm
   })) || [];
+
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } };
 
   return (
     <div className="flex flex-col gap-6 pb-10">
@@ -105,10 +101,10 @@ export default function Dashboard() {
 
       {historialActas.length > 0 && (
         <AnimatePresence>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* COLUMNA 1: Línea de Tiempo */}
-            <section className="lg:col-span-1 flex flex-col gap-4">
+            {/* COLUMNA 1: Línea de Tiempo (AHORA CON BOTONES MÁS GRANDES) */}
+            <section className="lg:col-span-3 flex flex-col gap-4">
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
                 <h3 className="font-bold text-[#002855] text-sm">Historial de Registros</h3>
                 <span className="bg-[#002855] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
@@ -116,7 +112,7 @@ export default function Dashboard() {
                 </span>
               </div>
               
-              <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {historialActas.map((acta) => {
                   const isActive = actaActiva?.id_acta === acta.id_acta;
                   const isTecnico = acta.tipo_registro === 'Visita Técnica';
@@ -125,20 +121,24 @@ export default function Dashboard() {
                     <button
                       key={acta.id_acta}
                       onClick={() => setActaActiva(acta)}
-                      className={`text-left p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2 ${
+                      // Cambiamos a p-5 para hacerlo más robusto
+                      className={`text-left p-5 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2 ${
                         isActive 
                           ? isTecnico ? 'border-[#002855] bg-white shadow-md' : 'border-[#00A4E4] bg-white shadow-md'
                           : 'border-transparent bg-[#F8FAFC] hover:bg-white hover:border-[#E2E8F0]'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{isTecnico ? '👷‍♂️' : '📱'}</span>
-                        <span className={`font-bold text-sm ${isActive ? (isTecnico ? 'text-[#002855]' : 'text-[#00A4E4]') : 'text-[#64748B]'}`}>
+                      <div className="flex items-center gap-3">
+                        {/* Emojis más grandes (text-2xl) */}
+                        <span className="text-2xl">{isTecnico ? '👷‍♂️' : '📱'}</span>
+                        {/* Texto principal más grande (text-base) */}
+                        <span className={`font-bold text-base leading-tight ${isActive ? (isTecnico ? 'text-[#002855]' : 'text-[#00A4E4]') : 'text-[#64748B]'}`}>
                           {acta.tipo_registro}
                         </span>
                       </div>
-                      <span className="text-xs text-[#64748B] font-medium ml-7">{acta.fecha_formateada}</span>
-                      <span className="text-[10px] text-[#94A3B8] font-mono ml-7 mt-1 tracking-wider uppercase">ID: {acta.id_acta}</span>
+                      {/* Textos secundarios ajustados con más margen (ml-9) para alinear con el texto, no con el icono */}
+                      <span className="text-sm text-[#64748B] font-medium ml-9">{acta.fecha_formateada}</span>
+                      <span className="text-xs text-[#94A3B8] font-mono ml-9 mt-1 tracking-wider uppercase">ID: {acta.id_acta}</span>
                     </button>
                   );
                 })}
@@ -146,7 +146,7 @@ export default function Dashboard() {
             </section>
 
             {/* COLUMNA 2: Detalles del Acta */}
-            <section className="lg:col-span-1 flex flex-col gap-4 border-l border-[#E2E8F0] pl-2">
+            <section className="lg:col-span-4 flex flex-col gap-4 border-l border-[#E2E8F0] pl-6">
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
                 <h3 className="font-bold text-[#00A4E4] text-sm">Zonas Registradas</h3>
                 <span className="bg-[#00A4E4] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
@@ -154,21 +154,22 @@ export default function Dashboard() {
                 </span>
               </div>
               
-              <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+              <motion.div className="flex flex-col gap-5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar" variants={containerVariants} initial="hidden" animate="visible">
                 {actaActiva?.mediciones.map((zona) => (
-                  <InstallationCard 
-                    key={zona.id_medicion}
-                    zona={zona.zona} 
-                    tamano_estimado={zona.tamano_estimado} 
-                    dbm={zona.dbm} 
-                    precision_gps_metros={zona.precision_gps_metros} 
-                  />
+                  <motion.div key={zona.id_medicion} variants={itemVariants}>
+                    <InstallationCard 
+                      zona={zona.zona} 
+                      tamano_estimado={zona.tamano_estimado} 
+                      dbm={zona.dbm} 
+                      precision_gps_metros={zona.precision_gps_metros} 
+                    />
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </section>
 
-            {/* COLUMNA 3 y 4: Mapa */}
-            <section className="lg:col-span-2 flex flex-col gap-4 border-l border-[#E2E8F0] pl-2">
+            {/* COLUMNA 3: Mapa */}
+            <section className="lg:col-span-5 flex flex-col gap-4 border-l border-[#E2E8F0] pl-6">
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
                   <h3 className="font-bold text-[#002855] text-sm">Topología del Registro</h3>
                   <div className="bg-[#F8FAFC] px-3 py-1 rounded-md border border-[#E2E8F0] text-xs font-bold text-[#64748B]">
@@ -184,7 +185,7 @@ export default function Dashboard() {
 
           {/* Panel Inferior de Resolución */}
           <motion.section 
-            className="mt-4 bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4"
+            className="mt-6 bg-white p-5 rounded-xl border border-[#E2E8F0] shadow-sm flex flex-col md:flex-row items-center justify-between gap-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
