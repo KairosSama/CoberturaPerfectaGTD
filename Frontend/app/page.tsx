@@ -27,7 +27,7 @@ export default function Dashboard() {
       if (!cleanRut) throw new Error('Debe ingresar un RUT para realizar la búsqueda.');
 
       // Llamada directa al Remote Procedure Call (RPC) de la base de datos
-      const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura_por_rut', {
+      const { data, error: supaError } = await supabase.rpc('obtener_analisis_cobertura', {
         p_rut_cliente: cleanRut
       });
 
