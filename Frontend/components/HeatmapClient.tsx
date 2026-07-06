@@ -188,7 +188,7 @@ export default function HeatmapClient({ actasSeleccionadas }: HeatmapClientProps
         ...m,
         latitud: m.coordenadas?.latitud || 0,
         longitud: m.coordenadas?.longitud || 0,
-        origen: acta.tipo_registro === 'Visita Técnica' ? 'tecnico' : 'cliente',
+        origen: (acta.tipo_registro === 'Visita Técnica' ? 'tecnico' : 'cliente') as 'tecnico' | 'cliente',
         id_acta: acta.id_acta
       }))
     );
