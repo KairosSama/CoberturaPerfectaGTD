@@ -5,25 +5,46 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabaseClient'; 
 import SearchRUT from '@/components/SearchRUT';
 import InstallationCard from '@/components/InstallationCard';
-import MapPlaceholder from '@/components/MapPlaceholder';
+import HeatmapClient from '@/components/HeatmapClient';
 
-interface ActaCertificacion {
+// Interfaces estrictas para evitar el "any" y prevenir bugs
+export interface AnalisisDistancia {
+  medicion_tecnico_id: string;
+  zona_referencia: string;
+  distancia_metros: number;
+  dentro_de_tolerancia: boolean;
+}
+
+export interface Medicion {
+  id_medicion: string;
+  zona: string;
+  tamano_estimado: string;
+  dbm: number;
+  precision_gps_metros: number;
+  coordenadas?: { latitud: number; longitud: number };
+  analisis_distancia?: AnalisisDistancia; // Solo viene en las mediciones del cliente
+}
+
+export interface ActaCertificacion {
   id_acta: string;
   tipo_registro: 'Visita Técnica' | 'Autoevaluación Cliente';
   fecha_formateada: string;
-  mediciones: any[];
+  mediciones: Medicion[];
 }
 
-// Tipos para nuestro nuevo sistema de modales
 type ModalType = 'upsell' | 'ticket' | null;
+type FiltroHistorial = 'Todos' | 'Visita Técnica' | 'Autoevaluación Cliente';
 
 export default function Dashboard() {
   const [historialActas, setHistorialActas] = useState<ActaCertificacion[]>([]);
-  const [actaActiva, setActaActiva] = useState<ActaCertificacion | null>(null);
+  
+  // NUEVO: Soportamos hasta 2 actas seleccionadas para comparar
+  const [actasSeleccionadas, setActasSeleccionadas] = useState<ActaCertificacion[]>([]);
+  const [filtroActivo, setFiltroActivo] = useState<FiltroHistorial>('Todos');
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Estados para controlar los modales y simulaciones de carga
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [actionSuccess, setActionSuccess] = useState(false);
@@ -32,7 +53,7 @@ export default function Dashboard() {
     setIsLoading(true);
     setError(null);
     setHistorialActas([]);
-    setActaActiva(null);
+    setActasSeleccionadas([]);
 
     try {
       const cleanRut = rut.trim();
@@ -60,9 +81,12 @@ export default function Dashboard() {
       } else if (parsedData.status === 'SIN_ACTAS') {
         setError('El cliente existe, pero no tiene historial de visitas ni reportes registrados.');
       } else if (parsedData.status === 'PROCESADO') {
-        setHistorialActas(parsedData.historial || []);
-        if (parsedData.historial && parsedData.historial.length > 0) {
-          setActaActiva(parsedData.historial[parsedData.historial.length - 1]);
+        const historial = parsedData.historial || [];
+        setHistorialActas(historial);
+        
+        // Autoseleccionar la última acta por defecto
+        if (historial.length > 0) {
+          setActasSeleccionadas([historial[historial.length - 1]]);
         }
       }
 
@@ -74,24 +98,31 @@ export default function Dashboard() {
     }
   };
 
-  const mapCoordinates = actaActiva?.mediciones.map(item => ({
-    latitud: item.coordenadas?.latitud || 0,
-    longitud: item.coordenadas?.longitud || 0,
-    dbm: item.dbm
-  })) || [];
+  // NUEVO: Lógica de selección múltiple (Máximo 2)
+  const toggleActaSelection = (acta: ActaCertificacion) => {
+    setActasSeleccionadas(prev => {
+      const isAlreadySelected = prev.some(a => a.id_acta === acta.id_acta);
+      
+      if (isAlreadySelected) {
+        // Si ya está seleccionada, la quitamos
+        return prev.filter(a => a.id_acta !== acta.id_acta);
+      } else {
+        // Si no está seleccionada, la agregamos (si hay 2, sacamos la más vieja)
+        if (prev.length >= 2) {
+          return [prev[1], acta];
+        } else {
+          return [...prev, acta];
+        }
+      }
+    });
+  };
 
-  // Función para ejecutar la acción de los botones
   const handleAction = () => {
     setIsProcessingAction(true);
-    // Simulamos un llamado a la API de ventas/soporte de GTD (2 segundos)
     setTimeout(() => {
       setIsProcessingAction(false);
       setActionSuccess(true);
-      
-      // Cerramos el modal automáticamente después de mostrar el éxito
-      setTimeout(() => {
-        closeModal();
-      }, 2000);
+      setTimeout(() => closeModal(), 2000);
     }, 2000);
   };
 
@@ -100,8 +131,10 @@ export default function Dashboard() {
     setTimeout(() => {
       setIsProcessingAction(false);
       setActionSuccess(false);
-    }, 300); // Esperamos a que termine la animación para resetear
+    }, 300); 
   };
+
+  const actasFiltradas = historialActas.filter(a => filtroActivo === 'Todos' || a.tipo_registro === filtroActivo);
 
   const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.1 } } };
   const itemVariants = { hidden: { opacity: 0, y: 15 }, visible: { opacity: 1, y: 0 } };
@@ -134,78 +167,122 @@ export default function Dashboard() {
         <AnimatePresence>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* COLUMNA 1: Línea de Tiempo */}
+            {/* COLUMNA 1: Línea de Tiempo y Filtros */}
             <section className="lg:col-span-3 flex flex-col gap-4">
-              <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
-                <h3 className="font-bold text-[#002855] text-sm">Historial de Registros</h3>
-                <span className="bg-[#002855] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
-                  {historialActas.length} Eventos
-                </span>
+              <div className="flex flex-col border-b pb-3 border-[#E2E8F0] gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-[#002855] text-sm">Historial de Registros</h3>
+                  <span className="bg-[#002855] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
+                    {historialActas.length} Eventos
+                  </span>
+                </div>
+                {/* Pestañas de Filtrado */}
+                <div className="flex bg-[#F8FAFC] p-1 rounded-lg border border-[#E2E8F0]">
+                  {(['Todos', 'Visita Técnica', 'Autoevaluación Cliente'] as FiltroHistorial[]).map(filtro => (
+                    <button
+                      key={filtro}
+                      onClick={() => setFiltroActivo(filtro)}
+                      className={`flex-1 text-[10px] font-bold py-1.5 rounded-md transition-all ${
+                        filtroActivo === filtro ? 'bg-white text-[#002855] shadow-sm border border-[#E2E8F0]' : 'text-[#64748B] hover:text-[#002855]'
+                      }`}
+                    >
+                      {filtro === 'Todos' ? 'Todos' : filtro === 'Visita Técnica' ? 'Técnico' : 'Cliente'}
+                    </button>
+                  ))}
+                </div>
               </div>
               
-              <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {historialActas.map((acta) => {
-                  const isActive = actaActiva?.id_acta === acta.id_acta;
+              <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {actasFiltradas.map((acta) => {
+                  const selectionIndex = actasSeleccionadas.findIndex(a => a.id_acta === acta.id_acta);
+                  const isSelected = selectionIndex !== -1;
+                  const isPrimary = selectionIndex === 0; // El primero seleccionado es azul
+                  const isSecondary = selectionIndex === 1; // El segundo seleccionado es verde
+
                   const isTecnico = acta.tipo_registro === 'Visita Técnica';
                   
                   return (
                     <button
                       key={acta.id_acta}
-                      onClick={() => setActaActiva(acta)}
-                      className={`text-left p-5 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2 ${
-                        isActive 
-                          ? isTecnico ? 'border-[#002855] bg-white shadow-md' : 'border-[#00A4E4] bg-white shadow-md'
+                      onClick={() => toggleActaSelection(acta)}
+                      className={`text-left p-4 rounded-xl border-2 transition-all duration-200 flex flex-col gap-2 relative overflow-hidden ${
+                        isSelected 
+                          ? isPrimary 
+                            ? 'border-[#00A4E4] bg-[#F0F9FF] shadow-md' 
+                            : 'border-[#10B981] bg-[#F0FDF4] shadow-md'
                           : 'border-transparent bg-[#F8FAFC] hover:bg-white hover:border-[#E2E8F0]'
                       }`}
                     >
+                      {isSelected && (
+                        <div className={`absolute top-0 right-0 px-2 py-0.5 rounded-bl-lg text-[10px] font-bold text-white ${isPrimary ? 'bg-[#00A4E4]' : 'bg-[#10B981]'}`}>
+                          Vista {isPrimary ? '1' : '2'}
+                        </div>
+                      )}
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{isTecnico ? '👷‍♂️' : '📱'}</span>
-                        <span className={`font-bold text-base leading-tight ${isActive ? (isTecnico ? 'text-[#002855]' : 'text-[#00A4E4]') : 'text-[#64748B]'}`}>
+                        <span className={`font-bold text-sm leading-tight ${isSelected ? (isPrimary ? 'text-[#00A4E4]' : 'text-[#10B981]') : 'text-[#64748B]'}`}>
                           {acta.tipo_registro}
                         </span>
                       </div>
-                      <span className="text-sm text-[#64748B] font-medium ml-9">{acta.fecha_formateada}</span>
-                      <span className="text-xs text-[#94A3B8] font-mono ml-9 mt-1 tracking-wider uppercase">ID: {acta.id_acta}</span>
+                      <span className="text-xs text-[#64748B] font-medium ml-9">{acta.fecha_formateada}</span>
+                      <span className="text-[10px] text-[#94A3B8] font-mono ml-9 uppercase truncate">ID: {acta.id_acta}</span>
                     </button>
                   );
                 })}
+                {actasFiltradas.length === 0 && (
+                  <div className="text-center text-sm text-[#64748B] py-10">No hay registros de este tipo.</div>
+                )}
               </div>
             </section>
 
-            {/* COLUMNA 2: Detalles del Acta */}
+            {/* COLUMNA 2: Detalles de Actas Seleccionadas */}
             <section className="lg:col-span-4 flex flex-col gap-4 border-l border-[#E2E8F0] pl-6">
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
-                <h3 className="font-bold text-[#00A4E4] text-sm">Zonas Registradas</h3>
+                <h3 className="font-bold text-[#002855] text-sm">Zonas Registradas</h3>
                 <span className="bg-[#00A4E4] text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">
-                  {actaActiva?.mediciones.length || 0} Puntos
+                  {actasSeleccionadas.length > 0 ? 'Comparativa Activa' : 'Sin Selección'}
                 </span>
               </div>
               
-              <motion.div className="flex flex-col gap-5 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar" variants={containerVariants} initial="hidden" animate="visible">
-                {actaActiva?.mediciones.map((zona) => (
-                  <motion.div key={zona.id_medicion} variants={itemVariants}>
-                    <InstallationCard 
-                      zona={zona.zona} 
-                      tamano_estimado={zona.tamano_estimado} 
-                      dbm={zona.dbm} 
-                      precision_gps_metros={zona.precision_gps_metros} 
-                    />
+              <div className="flex flex-col gap-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {actasSeleccionadas.length === 0 && (
+                  <div className="text-center text-[#64748B] py-20 flex flex-col items-center gap-3">
+                    <svg className="w-12 h-12 text-[#E2E8F0]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>
+                    <p className="text-sm font-medium">Seleccione hasta 2 actas en el panel izquierdo para ver sus detalles y compararlas.</p>
+                  </div>
+                )}
+
+                {/* Renderizamos las tarjetas de las actas seleccionadas */}
+                {actasSeleccionadas.map((acta, index) => (
+                  <motion.div key={acta.id_acta} variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col gap-3">
+                    <div className={`text-xs font-bold px-3 py-1.5 rounded-md text-white flex items-center justify-between shadow-sm ${index === 0 ? 'bg-[#00A4E4]' : 'bg-[#10B981]'}`}>
+                      <span>{acta.tipo_registro}</span>
+                      <span>{acta.fecha_formateada}</span>
+                    </div>
+                    {acta.mediciones.map((zona) => (
+                      <motion.div key={zona.id_medicion} variants={itemVariants}>
+                        <InstallationCard 
+                          zona={zona.zona} 
+                          tamano_estimado={zona.tamano_estimado} 
+                          dbm={zona.dbm} 
+                          precision_gps_metros={zona.precision_gps_metros}
+                          isTecnico={acta.tipo_registro === 'Visita Técnica'}
+                          analisis_distancia={zona.analisis_distancia}
+                        />
+                      </motion.div>
+                    ))}
                   </motion.div>
                 ))}
-              </motion.div>
+              </div>
             </section>
 
             {/* COLUMNA 3: Mapa */}
             <section className="lg:col-span-5 flex flex-col gap-4 border-l border-[#E2E8F0] pl-6">
               <div className="flex items-center justify-between border-b pb-2 border-[#E2E8F0]">
-                  <h3 className="font-bold text-[#002855] text-sm">Topología del Registro</h3>
-                  <div className="bg-[#F8FAFC] px-3 py-1 rounded-md border border-[#E2E8F0] text-xs font-bold text-[#64748B]">
-                    Renderizando: {actaActiva?.id_acta}
-                  </div>
+                  <h3 className="font-bold text-[#002855] text-sm">Topología Espacial</h3>
               </div>
-              <MapPlaceholder 
-                coordenadas={mapCoordinates} 
-                vistaActiva={actaActiva?.tipo_registro === 'Visita Técnica' ? 'tecnico' : 'cliente'} 
+              <HeatmapClient
+                actasSeleccionadas={actasSeleccionadas} 
               />
             </section>
           </div>
@@ -251,7 +328,6 @@ export default function Dashboard() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
             >
-              {/* Header del Modal */}
               <div className={`p-5 text-white ${activeModal === 'upsell' ? 'bg-[#10B981]' : 'bg-[#00A4E4]'}`}>
                 <h3 className="text-xl font-bold flex items-center gap-2">
                   {activeModal === 'upsell' ? (
@@ -261,8 +337,6 @@ export default function Dashboard() {
                   )}
                 </h3>
               </div>
-
-              {/* Cuerpo del Modal */}
               <div className="p-6">
                 {!actionSuccess ? (
                   <>
@@ -271,7 +345,6 @@ export default function Dashboard() {
                         ? 'Se enviará una oferta comercial segmentada al cliente para arriendo o compra de un Nodo TrueMesh, conteniendo la queja sin enviar personal técnico.'
                         : 'Se generará una orden de visita en terreno. Úselo solo si la falla reportada no coincide con las zonas de sombra firmadas en el acta base.'}
                     </p>
-                    
                     <div className="flex gap-3 justify-end">
                       <button 
                         onClick={closeModal}
@@ -294,12 +367,7 @@ export default function Dashboard() {
                     </div>
                   </>
                 ) : (
-                  /* Vista de Éxito */
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex flex-col items-center justify-center py-6 gap-3"
-                  >
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center py-6 gap-3">
                     <div className="w-16 h-16 bg-[#F0FDF4] rounded-full flex items-center justify-center text-[#10B981] mb-2">
                       <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     </div>
@@ -314,7 +382,6 @@ export default function Dashboard() {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

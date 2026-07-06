@@ -1,10 +1,13 @@
 import { motion } from 'framer-motion';
+import { AnalisisDistancia } from '@/app/page';
 
 interface InstallationCardProps {
   zona: string;
   tamano_estimado: string;
   dbm: number;
   precision_gps_metros: number;
+  isTecnico: boolean;
+  analisis_distancia?: AnalisisDistancia; // Opcional, solo llega en reportes de cliente
 }
 
 const ZoneIcon = () => (
@@ -13,7 +16,6 @@ const ZoneIcon = () => (
     </svg>
 );
 
-// Ícono de WiFi agrandado (w-7 h-7)
 const WifiSignalIcon = ({ color }: { color: string }) => (
     <svg className={`w-7 h-7 ${color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.112A1.5 1.5 0 0110.5 14.5m0-1a1.5 1.5 0 011.5 1.5" />
@@ -21,7 +23,7 @@ const WifiSignalIcon = ({ color }: { color: string }) => (
     </svg>
 );
 
-export default function InstallationCard({ zona, tamano_estimado, dbm, precision_gps_metros }: InstallationCardProps) {
+export default function InstallationCard({ zona, tamano_estimado, dbm, precision_gps_metros, isTecnico, analisis_distancia }: InstallationCardProps) {
   
   const getSignalDetails = (signal: number) => {
     if (signal > -60) return { color: 'text-[#10B981]', bgColor: 'bg-[#10B981]', status: 'Excelente Señal' };
@@ -30,16 +32,20 @@ export default function InstallationCard({ zona, tamano_estimado, dbm, precision
   };
 
   const { color, bgColor, status } = getSignalDetails(dbm);
+  
+  // Lógica para determinar el estilo visual de la tarjeta
+  const cardBorderColor = isTecnico ? 'border-[#E2E8F0]' : 'border-[#F1F5F9]';
+  const cardShadow = isTecnico ? 'shadow-sm' : 'shadow-none';
 
   return (
-    // Aumentamos el padding a p-6 y el gap general para que respire más
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-[#E2E8F0] flex flex-col gap-4 relative overflow-hidden group">
-      <div className="absolute inset-x-0 top-0 h-1 bg-[#00A4E4] opacity-0 group-hover:opacity-100 transition-opacity" />
+    <div className={`bg-white p-6 rounded-xl ${cardShadow} border ${cardBorderColor} flex flex-col gap-4 relative overflow-hidden group`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${isTecnico ? 'bg-[#002855]' : 'bg-[#00A4E4]'} opacity-0 group-hover:opacity-100 transition-opacity`} />
 
-      {/* Cambiamos items-center por items-start para que el texto largo baje de línea sin romperse */}
       <div className="flex justify-between items-start gap-3">
-        {/* Eliminamos 'truncate' y dejamos que el texto haga salto de línea natural */}
-        <h3 className="text-lg font-bold text-[#002855] leading-tight">{zona}</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{isTecnico ? '👷‍♂️' : '📱'}</span>
+          <h3 className="text-lg font-bold text-[#002855] leading-tight">{zona}</h3>
+        </div>
         <div className="flex items-start gap-1 text-[#64748B] flex-shrink-0">
             <ZoneIcon />
             <span className="text-sm font-medium">{tamano_estimado}</span>
@@ -50,7 +56,6 @@ export default function InstallationCard({ zona, tamano_estimado, dbm, precision
         <div className="flex items-center gap-4">
           <WifiSignalIcon color={color} />
           <div className="flex flex-col">
-            {/* Agrandamos brutalmente el número de dBm (text-2xl font-black) */}
             <span className={`text-2xl font-black tracking-tight ${color}`}>{dbm} dBm</span>
             <span className="text-sm text-[#64748B] font-medium mt-0.5">{status}</span>
           </div>
@@ -66,9 +71,34 @@ export default function InstallationCard({ zona, tamano_estimado, dbm, precision
         </div>
       </div>
 
-      <div className="text-sm text-[#64748B] flex justify-between items-center border-t border-[#E2E8F0] pt-3">
-        <span>Margen Error GPS:</span>
-        <span className="font-bold text-[#1E293B]">{precision_gps_metros} m</span>
+      <div className="flex flex-col gap-2">
+        <div className="text-sm text-[#64748B] flex justify-between items-center border-t border-[#E2E8F0] pt-3">
+          <span>Precisión GPS:</span>
+          <span className="font-bold text-[#1E293B]">±{precision_gps_metros} m</span>
+        </div>
+
+        {/* ALERTA ESPACIAL: Si es un reporte del cliente, mostramos cómo se compara con el técnico */}
+        {!isTecnico && analisis_distancia && (
+          <div className={`mt-2 p-3 rounded-lg flex items-start gap-2 border ${
+            analisis_distancia.dentro_de_tolerancia 
+              ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#065F46]' 
+              : 'bg-[#FEF2F2] border-[#FCA5A5] text-[#991B1B]'
+          }`}>
+            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {analisis_distancia.dentro_de_tolerancia 
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              }
+            </svg>
+            <div className="flex flex-col text-xs font-medium">
+              <span>Comparado con: {analisis_distancia.zona_referencia} (Línea Base)</span>
+              <span>Distancia medida: <strong>{analisis_distancia.distancia_metros} metros</strong></span>
+              {!analisis_distancia.dentro_de_tolerancia && (
+                <span className="font-bold mt-1 uppercase tracking-wide">⚠️ Fuera de tolerancia permitida</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
